@@ -326,6 +326,19 @@ const CONFIG={
 };
 const DEMO=!CONFIG.API_URL;
 
+/* ============ MODE TEMPEL DI LMS ============
+   Dibuka dari LMS: index.html?embed=1&nik=123456
+   - NIK diisi otomatis dan langsung masuk (kolom NIK dikunci saat di dalam LMS).
+   - Saat nilai tersimpan, LMS diberi kabar lewat postMessage.
+     LMS tetap memeriksa sendiri sheet Rekap; kabar ini hanya pemicu. */
+const QP=(()=>{try{return new URLSearchParams(location.search);}catch(e){return null;}})();
+const EMBED=!!QP&&QP.get("embed")==="1"&&window.parent!==window;
+let AUTO_NIK=QP?(QP.get("nik")||"").replace(/\D/g,""):"";
+const NIK_LMS=AUTO_NIK;
+const NIK_KUNCI=EMBED&&!!NIK_LMS;
+function kabariLMS(ev,data){if(!EMBED)return;
+  try{window.parent.postMessage(Object.assign({sumber:"game-ssl",modul:CONFIG.MODUL,event:ev},data||{}),"*");}catch(e){}}
+
 /* ============ PENYIMPANAN DI HP ============ */
 const LSK=k=>"ssl_"+CONFIG.MODUL+"_"+k;
 const ls={get(k,d){try{const v=localStorage.getItem(LSK(k));return v==null?d:JSON.parse(v);}catch(e){return d;}},
@@ -356,7 +369,7 @@ function flush(){if(flushing)return flushing;
   return flushing;}
 /* Jika nilai yang tadinya tertunda sudah terkirim, rapor diperbarui */
 function cekPending(){if(!S.pending||!S.sid)return;const r=QRES["s_"+S.sid];if(!r)return;
-  S.pending=false;S.resmi=r.resmi;S.hasil=r.hasil;ls.del("sesi");const el=stage.querySelector(".pending");if(el)el.remove();}
+  S.pending=false;S.resmi=r.resmi;S.hasil=r.hasil;ls.del("sesi");kabariLMS("selesai",{status:r.status,total:r.total});const el=stage.querySelector(".pending");if(el)el.remove();}
 window.addEventListener("online",()=>flush());
 
 /* ============ MODE DEMO (tanpa sheet) ============ */
@@ -558,7 +571,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 const total=()=>S.b[0]+S.b[1]+S.b[2];
 function topbar(title,pts){const t=$("#top");t.hidden=!title;$("#ttl").textContent=title||"";$("#pts").textContent=pts==null?"":pts;$("#pts").hidden=pts==null;$("#lat").hidden=!(S.status==="LATIHAN"&&title&&!/Arcade/.test(title));}
 function buzz(ms){try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}}
-function fullscreen(){try{const d=document.documentElement;if(!document.fullscreenElement&&d.requestFullscreen)d.requestFullscreen().catch(()=>{});}catch(e){}}
+function fullscreen(){if(EMBED)return;try{const d=document.documentElement;if(!document.fullscreenElement&&d.requestFullscreen)d.requestFullscreen().catch(()=>{});}catch(e){}}
 function inter(k,title,chars,next){const d=document.createElement("div");d.className="inter";
   d.innerHTML=`<span class="logo-pill lg"><img class="logo-md" src="${LOGO}" alt="Indomaret" onerror="this.remove()"></span><div class="k">${k}</div><h2>${title}</h2><div class="face-md" style="display:flex;gap:4px">${chars.map(c=>face(c[0],c[1])).join("")}</div>`;
   $("#app").appendChild(d);setTimeout(()=>{d.remove();next();},1700);}
@@ -575,6 +588,7 @@ function scrPesan(judul,isi,tombol,aksi,tombol2,aksi2,wajah){topbar(null);stage.
 function tampilIdentitas(){const w=$("#who");if(!w)return;if(!S.peserta||!S.nik){w.hidden=true;return;}
   w.textContent=`${S.peserta.nama} · NIK ${S.nik}${S.peserta.cabang?" · "+S.peserta.cabang:""}`;w.hidden=false;}
 function scrLogin(){topbar(null);S.peserta=null;tampilIdentitas();let last="";try{last=localStorage.getItem("ssl_nik")||"";}catch(e){}
+  if(NIK_KUNCI)last=NIK_LMS;else if(AUTO_NIK)last=AUTO_NIK;
   stage.innerHTML=`
   <div class="center grow" style="justify-content:center">
     <img class="logo-lg" src="${LOGO}" alt="Indomaret" onerror="this.remove()">
@@ -583,7 +597,7 @@ function scrLogin(){topbar(null);S.peserta=null;tampilIdentitas();let last="";tr
     <div class="facts"><span>±12 menit</span><span>Pemanasan + 3 babak</span><span>Lulus ≥ 75</span></div>
     <div class="panel" style="width:100%;display:flex;flex-direction:column;gap:12px">
       <label for="nik" style="font-weight:700">Masukkan NIK kamu</label>
-      <input id="nik" class="nik" inputmode="numeric" autocomplete="off" maxlength="${CONFIG.NIK_MAX}" placeholder="NIK" value="${esc(last)}">
+      <input id="nik" class="nik" inputmode="numeric" autocomplete="off" maxlength="${CONFIG.NIK_MAX}" placeholder="NIK" value="${esc(last)}"${NIK_KUNCI?" readonly":""}>
       <div class="fb" id="lfb"></div>
       <button class="btn y" id="go">Masuk</button>
     </div>
@@ -596,9 +610,11 @@ function scrLogin(){topbar(null);S.peserta=null;tampilIdentitas();let last="";tr
     try{j=await api("login");}catch(e){$("#lfb").textContent=e.message;btn.disabled=false;btn.textContent="Masuk";return;}
     try{localStorage.setItem("ssl_nik",v);}catch(e){}
     S.peserta=j.peserta;tampilIdentitas();S.resmi=j.resmi;S.riwayat=j.percobaan||0;S.arcadeBest=Math.max(S.arcadeBest,j.rekorArcade||0);
+    if(j.resmi)kabariLMS("resmi-ada",{total:j.resmi.total});
     fullscreen();
     if(j.sesiTerbuka)scrLanjut(j.sesiTerbuka);else scrAvatar();};
-  $("#go").onclick=go;$("#nik").onkeydown=e=>{if(e.key==="Enter")go();};}
+  $("#go").onclick=go;$("#nik").onkeydown=e=>{if(e.key==="Enter")go();};
+  if(AUTO_NIK){AUTO_NIK="";go();}}
 const TAHAP_LBL=["Belum ada babak yang tersimpan","Babak 1 kasus 1","Babak 1","Babak 2"];
 function scrLanjut(s){S.av=s.avatar==="W"?"sslw":"sslp";const nm=esc(S.peserta.nama);
   if(s.sisaLanjut>0){scrPesan(`Halo, ${nm}`,
@@ -637,7 +653,7 @@ function checkpoint(t){S.tahap=t;simpanLokal();enqueue({key:"p_"+S.sid,aksi:"pro
 async function selesai(){clearTimers();topbar(null);stage.innerHTML=loading("Menyimpan nilai…");S.tahap=4;simpanLokal();
   const key="s_"+S.sid;await enqueue({key,aksi:"selesai",data:{nik:S.nik,id:S.sid,b:S.b,ans:S.ans,avatar:avCode()}});
   const r=QRES[key];
-  if(r){S.resmi=r.resmi;S.hasil=r.hasil;S.pending=false;ls.del("sesi");}
+  if(r){S.resmi=r.resmi;S.hasil=r.hasil;S.pending=false;ls.del("sesi");kabariLMS("selesai",{status:r.status,total:r.total});}
   else{S.pending=true;S.hasil=null;if(S.status==="RESMI"&&!S.resmi)S.resmi={total:total(),hasil:total()>=75?"LULUS":"REMEDIAL"};}
   rapor();}
 
