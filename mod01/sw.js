@@ -1,6 +1,6 @@
 /* Service worker Game SSL MOD-01 · TCD2 - ETD © 2026
    Naikkan VERSI setiap kali index.html diubah, supaya HP peserta mengambil versi baru. */
-const VERSI = 'mod01-v3';
+const VERSI = 'mod01-v4';
 const INTI = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
