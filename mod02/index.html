@@ -1059,7 +1059,7 @@ function rules(key,chars,next){clearTimers();const R=RULES[key];topbar(null);sta
 /* ============ BABAK 1-3 ============
    Tiap babak dibungkus jadi modul (B1M, B2M, B3M) supaya variabelnya tidak bertabrakan.
    Nilai ditulis ke S.b[0..2] di akhir babak, jawaban ringkas ke S.ans, lalu checkpoint. */
-const sapaB=()=>S.av==="sslw"?"Ibu":`${sapaB()}`;
+const sapaB=()=>S.av==="sslw"?"Ibu":"Ba"+"pak";
 function b1start(){S.b=[0,0,0];S.ans=[];inter("BABAK 1","Tangkap Momen Emas",[["rina","netral"],["doni","netral"]],()=>rules("b1",[[S.av,"berpikir"],["rina","netral"],["doni","netral"]],b1));}
 function b1(){B1M.play();}
 function b2start(){S.b[1]=0;S.b[2]=0;S.ans=S.ans.filter(x=>/^B1/.test(x));inter("BABAK 2","Mesin Perakit SBI",[["rina","netral"],["doni","netral"]],()=>rules("b2",[[S.av,"berpikir"],["rina","netral"]],b2));}
@@ -1152,7 +1152,8 @@ function place(S,z){S.zona=z;const p=ZONE[z];S.el.style.left=p[0]+"%";S.el.style
 function setLabel(S,t,kind){S.label=t;S.kind=kind;S.hit=false;const a=S.el.querySelector(".act");a.textContent=t;a.classList.remove("new");void a.offsetWidth;a.classList.add("new");S.el.classList.remove("hit");}
 function toast(t){const e=$("#toast");if(!e)return;e.textContent=t;e.classList.remove("show");void e.offsetWidth;e.classList.add("show");}
 function smile(d){G.smile=Math.max(0,Math.min(100,G.smile+d));const b=$("#sm");if(b){b.style.width=G.smile+"%";b.style.background=G.smile>=60?"var(--ok)":G.smile>=35?"#e0a400":"var(--bad)";}}
-function score30(){const raw=G.res.reduce((a,r)=>a+r.speed+r.cp,0);return Math.max(0,Math.round(raw*30/40)-G.pen);}
+function score30(){const raw=G.res.reduce((a,r)=>a+r.speed+r.cp,0);return Math.max(0,Math.round(raw*30/40)-penOf());}
+const PEN_MAX=10;const penOf=()=>Math.min(G.pen,PEN_MAX);
 function drawOcc(){const o=$("#oc");if(!o)return;const s=G.seg;o.querySelectorAll("i").forEach((d,k)=>{d.className=s&&k<s.occ-1?"gone":s&&k===s.occ-1&&s.live?"now":"";});}
 function randomActivity(S){const bad=Math.random()<.3;setLabel(S,bad?pickOne(BURUK):pickOne(RUTIN),bad?"buruk":"rutin");}
 
@@ -1236,9 +1237,9 @@ function deliver(i,id){const s=G.seg;if(G.over||!s||s.paused||s.ending)return;co
     S.el.querySelector(".hd").innerHTML=face(id,e);S.el.classList.add("done");S.el.classList.remove("glow");
     smile(c.j==="personal"?14:c.j==="umum"?3:-8);(c.j==="personal"?SFX.ok:c.j==="umum"?SFX.mid:SFX.bad)();
     topbar("Babak 1 · Momen Emas",score30());return;}
-  if(S.hit)return;S.hit=true;S.el.classList.add("hit");const p=S.kind==="buruk"?2:1;G.pen+=p;G.penLog.push({id,label:S.label,p});
+  if(S.hit)return;S.hit=true;S.el.classList.add("hit");const p=S.kind==="buruk"?2:1;const pen0=penOf();G.pen+=p;const cost=penOf()-pen0;G.penLog.push({id,label:S.label,p});
   smile(-5);const o2=other([id]);const act=S.label.charAt(0).toLowerCase()+S.label.slice(1);
-  G.fbPts=-p;say(id,text,"bad","SALAH SASARAN",S.kind==="buruk"?`${nm} sedang ${act}. Ini perlu ditegur, bukan dipuji.`:`${nm} sedang ${act}. Itu kerja rutin, belum momen istimewa.`,null,
+  G.fbPts=-cost;say(id,text,"bad","SALAH SASARAN",S.kind==="buruk"?`${nm} sedang ${act}. Ini perlu ditegur, bukan dipuji.`:`${nm} sedang ${act}. Itu kerja rutin, belum momen istimewa.`,null,
     S.kind==="buruk"?pickOne([{by:o2,e:"kesal",t:`Hah? ${nm} lagi ${act}, kok malah dipuji? Nggak adil, ${sapa()}!`},{by:o2,e:"kesal",t:`Jadi kalau ${act.split(" ").slice(0,2).join(" ")} dipuji ya, ${sapa()}? Oke deh…`}])
       :pickOne([{by:o2,e:"kesal",t:`Lho, ${nm} cuma ${act}. Saya juga tiap hari begitu, nggak pernah dipuji.`},{by:o2,e:"berpikir",t:`Itu kan memang kerjaan rutin ${nm}, ${sapa()}. Yang lain gimana?`}]));
   topbar("Babak 1 · Momen Emas",score30());}
@@ -1260,7 +1261,7 @@ function tick(dt){const s=G.seg;if(!s||s.paused||s.ending)return;s.t+=dt;const r
 function penHTML(){if(!G.penLog.length)return "";
   const rut=G.penLog.filter(p=>p.p===1),bur=G.penLog.filter(p=>p.p===2),per={};G.penLog.forEach(p=>per[p.id]=(per[p.id]||0)+1);
   const row=(lbl,arr,ex)=>arr.length?`<div class="pen-row"><span>${lbl}<small>${ex}</small></span><b>${arr.length}× · −${arr.reduce((a,p)=>a+p.p,0)}</b></div>`:"";
-  return `<div class="panel pen"><div class="pen-h"><h3>Salah sasaran</h3><span class="verdict no" style="padding:3px 9px">−${G.pen} poin</span></div>
+  return `<div class="panel pen"><div class="pen-h"><h3>Salah sasaran</h3><span class="verdict no" style="padding:3px 9px">−${penOf()} poin${G.pen>PEN_MAX?" (maks)":""}</span></div>
    ${row("Kerja rutin",rut,"Sesuai SOP, belum momen istimewa")}${row("Perilaku kurang baik",bur,"Perlu ditegur, bukan dipuji")}
    <div class="pen-who">${Object.keys(per).map(id=>`<span>${esc(CH[id].name)} ${per[id]}×</span>`).join("")}</div></div>`;}
 function finish(){if(G.over)return;G.over=true;cancelAnimationFrame(raf);document.querySelectorAll(".dragghost").forEach(g=>g.remove());
@@ -1277,7 +1278,7 @@ function finish(){if(G.over)return;G.over=true;cancelAnimationFrame(raf);documen
   sfx(total>=24?"perfect":total>=15?"ok":"down");topbar("Hasil · Babak 1",total);stage.scrollTop=0;
   stage.innerHTML=`<div class="center"><div class="face-lg">${face(S.av,total>=22?"senang":"berpikir")}</div><span class="lbl">Babak 1</span>
    <div class="score-big">${total}<span style="font-size:24px;color:var(--muted)">/30</span></div>
-   <p class="muted">Smile Meter ${Math.round(G.smile)}${G.pen?` · Penalti salah sasaran −${G.pen}`:""}</p></div>
+   <p class="muted">Smile Meter ${Math.round(G.smile)}${G.pen?` · Penalti salah sasaran −${penOf()}${G.pen>PEN_MAX?" (batas maksimal)":""}`:""}</p></div>
    <div class="panel"><table class="rk"><thead><tr><th>Momen</th><th>Kesempatan</th><th>Kartu</th></tr></thead><tbody>${G.res.map(r=>`<tr>
      <td><b>${esc(CH[r.m.id].name)}</b><br><span class="muted" style="font-size:12px">${esc(r.m.label)}</span></td>
      <td>${r.occ?"ke-"+r.occ:"–"}<br>${r.speed}/4</td><td>${pill(r.card)}<br>${r.cp}/6</td></tr>`).join("")}</tbody></table>
