@@ -1,0 +1,17 @@
+{
+  "name": "Memberikan Apresiasi · Game SSL MOD-02",
+  "short_name": "Apresiasi SSL",
+  "description": "Game latihan Memberikan Apresiasi untuk Store Senior Leader. TCD2 - ETD © 2026",
+  "lang": "id",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#e8ecf4",
+  "theme_color": "#18213a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
